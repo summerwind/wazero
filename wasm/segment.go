@@ -23,6 +23,13 @@ type ImportDesc struct {
 	// FuncTypeIndex is the index in Module.TypeSection corresponding to this import's FunctionType.
 	// This is only valid when Kind equals ImportKindFunction
 	FuncTypeIndex uint32
+	// FuncName is the optional symbolic identifier read from the text format or SectionIDCustom under the key "name"
+	// subsection 1. Ex. main
+	//
+	// See https://www.w3.org/TR/wasm-core-1/#binary-namesec
+	//
+	// Note: When read from the text format, the leading '$' is stripped to maintain parity with other tools like wabt.
+	FuncName      string
 	TableTypePtr  *TableType
 	MemTypePtr    *MemoryType
 	GlobalTypePtr *GlobalType

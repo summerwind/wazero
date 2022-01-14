@@ -20,7 +20,7 @@ func TextToBinary(source []byte) (result *wasm.Module, err error) {
 
 	// Next, we need to convert the types from the text format into the binary one. This is easy because the only
 	// difference is that the text format has type names and the binary format does not.
-	result = &wasm.Module{}
+	result = &wasm.Module{Name: m.name}
 	for _, t := range m.types {
 		var results []wasm.ValueType
 		if t.result != 0 {
@@ -32,9 +32,14 @@ func TextToBinary(source []byte) (result *wasm.Module, err error) {
 	// Now, handle any imported functions. Notably, we retain the same insertion order as defined in the text format in
 	// case a numeric index is used for the start function (or another reason such as the call instruction).
 	for _, f := range m.importFuncs {
+		// TODO: param names
 		result.ImportSection = append(result.ImportSection, &wasm.ImportSegment{
 			Module: f.module, Name: f.name,
-			Desc: &wasm.ImportDesc{Kind: wasm.ImportKindFunction, FuncTypeIndex: f.typeIndex.numeric},
+			Desc: &wasm.ImportDesc{
+				Kind:          wasm.ImportKindFunction,
+				FuncTypeIndex: f.typeIndex.numeric,
+				FuncName:      f.funcName,
+			},
 		})
 	}
 
@@ -43,6 +48,6 @@ func TextToBinary(source []byte) (result *wasm.Module, err error) {
 		result.StartSection = &m.startFunction.numeric
 	}
 
-	// TODO: encode CustomSection["name"] with module function and local names
+	// TODO: module function and local names
 	return
 }

@@ -27,22 +27,22 @@ const (
 
 func (m *Module) readSections(r *reader) error {
 	for {
-		b := make([]byte, 1)
-		if _, err := io.ReadFull(r, b); err == io.EOF {
+		sectionID := make([]byte, 1)
+		if _, err := io.ReadFull(r, sectionID); err == io.EOF {
 			return nil
 		} else if err != nil {
 			return fmt.Errorf("read section id: %w", err)
 		}
 
-		ss, _, err := leb128.DecodeUint32(r)
+		sectionSize, _, err := leb128.DecodeUint32(r)
 		if err != nil {
-			return fmt.Errorf("get size of section for id=%d: %v", SectionID(b[0]), err)
+			return fmt.Errorf("get size of section for id=%d: %v", SectionID(sectionID[0]), err)
 		}
 
 		sectionContentStart := r.read
-		switch b[0] {
+		switch sectionID[0] {
 		case SectionIDCustom:
-			err = m.readSectionCustom(r, int(ss))
+			err = m.readSectionCustom(r, int(sectionSize))
 		case SectionIDType:
 			err = m.readSectionTypes(r)
 		case SectionIDImport:
@@ -69,18 +69,18 @@ func (m *Module) readSections(r *reader) error {
 			err = ErrInvalidSectionID
 		}
 
-		if err == nil && sectionContentStart+int(ss) != r.read {
-			err = fmt.Errorf("invalid section length: expected to be %d but got %d", ss, r.read-sectionContentStart)
+		if err == nil && sectionContentStart+int(sectionSize) != r.read {
+			err = fmt.Errorf("invalid section length: expected to be %d but got %d", sectionSize, r.read-sectionContentStart)
 		}
 
 		if err != nil {
-			return fmt.Errorf("section ID %d: %v", b[0], err)
+			return fmt.Errorf("section ID %d: %v", sectionID[0], err)
 		}
 	}
 }
 
 func (m *Module) readSectionCustom(r *reader, sectionSize int) error {
-	nameLen, nameLenBytes, err := leb128.DecodeUint32(r)
+	nameLen, nameLenSize, err := leb128.DecodeUint32(r)
 	if err != nil {
 		return fmt.Errorf("cannot read custom section name length")
 	}
@@ -93,16 +93,16 @@ func (m *Module) readSectionCustom(r *reader, sectionSize int) error {
 	if !utf8.Valid(nameBuf) {
 		return fmt.Errorf("custom section name must be valid utf8")
 	}
-	contentLen := int(sectionSize) - int(nameLenBytes) - int(nameLen)
-	if contentLen < 0 {
+	dataSize := sectionSize - int(nameLenSize) - int(nameLen)
+	if dataSize < 0 {
 		return fmt.Errorf("malformed custom section %s", string(nameBuf))
 	}
-	contents := make([]byte, contentLen)
-	_, err = io.ReadFull(r, contents)
+	data := make([]byte, dataSize)
+	_, err = io.ReadFull(r, data)
 	if err != nil {
-		return fmt.Errorf("cannot read custom section contents: %v", err)
+		return fmt.Errorf("cannot read custom section data: %v", err)
 	}
-	m.CustomSections[string(nameBuf)] = contents
+	m.CustomSections[string(nameBuf)] = data
 	return nil
 }
 

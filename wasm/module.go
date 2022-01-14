@@ -8,10 +8,13 @@ import (
 	"github.com/tetratelabs/wazero/wasm/leb128"
 )
 
-const (
-	magic   = "\x00asm"
-	version = "\x01\x00\x00\x00"
-)
+// magic is the 4 byte preamble (literally "\0asm") of the binary format
+// See https://www.w3.org/TR/wasm-core-1/#binary-magic
+var magic = []byte{0x00, 0x61, 0x73, 0x6D}
+
+// version is format version and doesn't change between known specification versions
+// See https://www.w3.org/TR/wasm-core-1/#binary-version
+var version = []byte{0x01, 0x00, 0x00, 0x00}
 
 type reader struct {
 	binary []byte
@@ -28,6 +31,13 @@ func (r *reader) Read(p []byte) (n int, err error) {
 // Module is a WebAssembly binary representation.
 // See https://www.w3.org/TR/wasm-core-1/#modules%E2%91%A8
 type Module struct {
+	// Name is the optional symbolic identifier read from the text format or SectionIDCustom under the key "name"
+	// subsection 0. Ex. math
+	//
+	// See https://www.w3.org/TR/wasm-core-1/#binary-namesec
+	//
+	// Note: When read from the text format, the leading '$' is stripped to maintain parity with other tools like wabt.
+	Name string
 	// TypeSection contains the unique FunctionType of functions imported or defined in this module.
 	//
 	// See https://www.w3.org/TR/wasm-core-1/#type-section%E2%91%A0
